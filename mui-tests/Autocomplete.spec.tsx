@@ -1,6 +1,6 @@
 import Autocomplete from "@mui/material/Autocomplete";
 import TextField from "@mui/material/TextField";
-import { getAllByRole, render, screen } from "@testing-library/react";
+import { getAllByRole, render } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import * as React from "react";
 
@@ -65,6 +65,7 @@ describe("MUI AutoComplete", () => {
       options.forEach((o) => {
         expect(o.innerHTML).toContain("The Godfather");
       });
+      expect(options[0].innerHTML).not.toBe(options[1].innerHTML);
     });
     it("should ignore case when filtering", () => {
       const { getByLabelText, container } = render(comboBox);
@@ -77,8 +78,7 @@ describe("MUI AutoComplete", () => {
     });
     it("should let the user know if there were no matches", () => {
       const { getByLabelText, container } = render(comboBox);
-      const textInput = getByLabelText("Movie");
-      userEvent.type(textInput, "Return of Jar-Jar");
+      userEvent.type(getByLabelText("Movie"), "Return of Jar-Jar");
       expect(() => getAllByRole(container, "option")).toThrow();
     });
   });
@@ -96,7 +96,7 @@ describe("MUI AutoComplete", () => {
           <TextField
             {...params}
             variant="standard"
-            label="Multiple values"
+            label="Movies"
             placeholder="Favorites"
           />
         )}
@@ -111,58 +111,39 @@ describe("MUI AutoComplete", () => {
       const buttons = getAllByRole("button");
       const chips = buttons.filter(hasTagIndex);
       expect(chips.length).toBe(1);
-      /**
-       * <div
-      class="MuiButtonBase-root MuiChip-root MuiChip-filled MuiChip-sizeMedium MuiChip-colorDefault MuiChip-deletable MuiChip-deletableColorDefault MuiChip-filledDefault MuiAutocomplete-tag MuiAutocomplete-tagSizeMedium css-1k430x0-MuiButtonBase-root-MuiChip-root"
-      data-tag-index="0"
-      role="button"
-      tabindex="-1"
-    >
-      <span
-        class="MuiChip-label MuiChip-labelMedium css-6od3lo-MuiChip-label"
-      >
-        The Shawshank Redemption
-      </span>
-      <svg
-        aria-hidden="true"
-        class="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium MuiChip-deleteIcon MuiChip-deleteIconMedium MuiChip-deleteIconColorDefault MuiChip-deleteIconOutlinedColorDefault css-i4bv87-MuiSvgIcon-root"
-        data-testid="CancelIcon"
-        focusable="false"
-        viewBox="0 0 24 24"
-      >
-        <path
-          d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"
-        />
-      </svg>
-    </div>
-
-      at node_modules/@testing-library/react/dist/pure.js:108:29
-          at Array.forEach (<anonymous>)
-
-  console.log
-    <button
-      aria-label="Open"
-      class="MuiButtonBase-root MuiIconButton-root MuiIconButton-sizeMedium MuiAutocomplete-popupIndicator css-qzbt6i-MuiButtonBase-root-MuiIconButton-root-MuiAutocomplete-popupIndicator"
-      tabindex="-1"
-      title="Open"
-      type="button"
-    >
-      <svg
-        aria-hidden="true"
-        class="MuiSvgIcon-root MuiSvgIcon-fontSizeMedium css-i4bv87-MuiSvgIcon-root"
-        data-testid="ArrowDropDownIcon"
-        focusable="false"
-        viewBox="0 0 24 24"
-      >
-        <path
-          d="M7 10l5 5 5-5z"
-        />
-      </svg>
-      <span
-        class="MuiTouchRipple-root css-8je8zh-MuiTouchRipple-root"
-      />
-    </button>
-       */
+    });
+    it("should add a chip once a value from the list has been selected", () => {
+      const { getAllByRole, getByLabelText } = render(multipleValues);
+      const textInput = getByLabelText("Movies");
+      userEvent.type(textInput, "The Godfather");
+      userEvent.keyboard("{ArrowDown}");
+      userEvent.keyboard("{enter}");
+      const chips = getAllByRole("button").filter(hasTagIndex);
+      expect(chips.length).toBe(2);
+    });
+    it("should remove a chip if clicked", () => {
+      const { getAllByRole, getByLabelText, getAllByTestId } =
+        render(multipleValues);
+      const textInput = getByLabelText("Movies");
+      userEvent.type(textInput, "The Godfather");
+      userEvent.keyboard("{ArrowDown}");
+      userEvent.keyboard("{enter}");
+      const cancelIcons = getAllByTestId("CancelIcon");
+      userEvent.click(cancelIcons[0]);
+      const remainingChips = getAllByRole("button").filter(hasTagIndex);
+      expect(remainingChips.length).toBe(1);
+    });
+    it("should remove all chips if clear button is clicked", () => {
+      const { getByTitle, getAllByRole, getByLabelText, debug } =
+        render(multipleValues);
+      const textInput = getByLabelText("Movies");
+      userEvent.type(textInput, "The Godfather");
+      userEvent.keyboard("{ArrowDown}");
+      userEvent.keyboard("{enter}");
+      const clearButton = getByTitle("Clear");
+      userEvent.click(clearButton);
+      const chips = getAllByRole("button").filter(hasTagIndex);
+      expect(chips.length).toBe(0);
     });
   });
 });
